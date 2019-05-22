@@ -66,19 +66,19 @@ struct blocks_meta {
     int         y_size;
 };
 
-struct array_meta *alloc_meta(int x, int y)
+struct blocks_meta *alloc_meta(int x, int y)
 {
-    struct block         *p  = (struct block *)malloc(sizeof(struct block) * x * y);
-    struct array_meta    *am = (struct blocks_meta *)malloc(sizeof(struct blocks_meta));
+    struct block          *p  = (struct block *)malloc(sizeof(struct block) * x * y);
+    struct blocks_meta    *am = (struct blocks_meta*)malloc(sizeof(struct blocks_meta));
 
-    bm->p      = p;
-    bm->x_size = x;
-    bm->y_size = y;
+    am->p      = p;
+    am->x_size = x;
+    am->y_size = y;
 
-    return bm ;
+    return am ;
 }
 
-struct block *get_block_ptr(struct array_meta *am, int x, int y)
+struct block *get_block_ptr(struct blocks_meta *am, int x, int y)
 {
     return am->p + (am->x_size*y) + x;
 }
@@ -141,7 +141,9 @@ static const int codes[] =
 
 void compress(
     char const *filename,
-    struct array_meta *am )
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x)
 {
     struct block *bp;
     // Initialize the blocks' error to a ridiculously high number.
@@ -151,7 +153,7 @@ void compress(
             bp->error = 0x7fffffffffffffffLL;
         }
     }
-            
+
 
     // Grab the source (range) image.
     Image range( filename );
@@ -274,15 +276,15 @@ void compress(
                         }
 
                         // Is it out best match yet?
-                        bp = get_block_ptr(am, range_x, range_y)
+                        bp = get_block_ptr(am, range_x, range_y);
                         if ( error < bp->error ) {
                             bp->orientation = orientation;
                             bp->x           = domain_x;
                             bp->y           = domain_y;
-                            bp->red = red_bits;
-                            bp->green = green_bits;
-                            bp->blue = blue_bits;
-                            bp->error = error;
+                            bp->red         = red_bits;
+                            bp->green       = green_bits;
+                            bp->blue        = blue_bits;
+                            bp->error       = error;
                         }
 
                     }
@@ -355,15 +357,19 @@ void decompress(
 }
 
 void encode(
-    char const *filename )
+    char const *filename,
+    char blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x )
 {
     // For encoding, we just take all the information stored in the blocks structure, along with the
     // image size, and turn it into a huge number.  This is like using a variable base.
     mpz_class number = 0;
+    struct block *bp;
     for ( int y = 0; y < blocks_in_y; ++y )
         for ( int x = 0; x < blocks_in_x; ++x )
         {
-            block &current = blocks[ y ][ x ];
+            block &current = get_block_ptr(am, x, y)
             int part = current.orientation;
             part = part * steps_in_x + current.x;
             part = part * steps_in_y + current.y;
@@ -524,13 +530,14 @@ void main(
         // steps_in_red = redStepsArg.getValue();
         // steps_in_green = greenStepsArg.getValue();
         // steps_in_blue = blueStepsArg.getValue();
-        // blocks_in_x = xBlocksArg.getValue();
-        // blocks_in_y = yBlocksArg.getValue();
+        blocks_in_x = xBlocksArg.getValue();
+        blocks_in_y = yBlocksArg.getValue();
+        struct blocks_meta *m = alloc_meta(blocks_in_x, blocks_in_y);
         //
         // blocks[blocks_in_x][blocks_in_y];
         if (encodeBool) {
-            compress( input );
-            encode( output );
+            compress( input, m, blocks_in_y, blocks_in_x );
+            encode( output m, blocks_in_y, blocks_in_x );
         }
         else if (decodeBool) {
             decode( input );
