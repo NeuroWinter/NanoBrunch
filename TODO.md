@@ -3,3 +3,6 @@
     ```
     what():  Magick: geometry does not contain image `#000000000000' @ warning/transform.c/CropImage/666
     ```
+* Change program name to NanoBrunch
+* Write a README.md
+
