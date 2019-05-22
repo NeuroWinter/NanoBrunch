@@ -18,8 +18,8 @@ const static int steps_in_y = 30;
 const static int steps_in_red = 4;
 const static int steps_in_green = 4;
 const static int steps_in_blue = 4;
-const static int blocks_in_x = 20;
-const static int blocks_in_y = 20;
+// const static int blocks_in_x = 20;
+// const static int blocks_in_y = 20;
 const static int maximum_width = 6000;
 const static int maximum_height = 6000;
 
@@ -295,8 +295,12 @@ void compress(
 }
 
 void decompress(
-    char const *filename )
+    char const *filename,
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x)
 {
+    struct block *bp;
     // Start out with a black range image.
     Image range( Geometry( image_width, image_height ), Color( "black" ) );
     range.backgroundColor( Color( "black" ) );
@@ -332,18 +336,18 @@ void decompress(
                 int range_left = image_width * range_x / blocks_in_x;
                 int block_width = image_width * ( range_x + 1) / blocks_in_x - range_left;
 
-                block &current = blocks[ range_y ][ range_x ];
+                bp = get_block_ptr(am, range_x, range_y );
 
-                Image domain = orientations[ current.orientation ];
+                Image domain = orientations[ bp->orientation ];
                 Geometry domain_size = domain.size();
 
-                int domain_top = ( domain_size.height() - block_height ) * current.y / steps_in_y;
-                int domain_left = ( domain_size.width() - block_width ) * current.x / steps_in_x;
+                int domain_top = ( domain_size.height() - block_height ) * bp->y / steps_in_y;
+                int domain_left = ( domain_size.width() - block_width ) * bp->x / steps_in_x;
                 domain.crop( Geometry( block_width, block_height, domain_left, domain_top ) );
 
-                int quantized_red = current.red * QuantumRange / ( steps_in_red - 1 );
-                int quantized_green = current.green * QuantumRange / ( steps_in_green - 1 );
-                int quantized_blue = current.blue * QuantumRange / ( steps_in_blue - 1 );
+                int quantized_red = bp->red * QuantumRange / ( steps_in_red - 1 );
+                int quantized_green = bp->green * QuantumRange / ( steps_in_green - 1 );
+                int quantized_blue = bp->blue * QuantumRange / ( steps_in_blue - 1 );
                 domain.colorize( 100 * color_weight_a / ( color_weight_a + color_weight_b ),
                                  Color( quantized_red, quantized_green, quantized_blue ) );
 
@@ -358,7 +362,7 @@ void decompress(
 
 void encode(
     char const *filename,
-    char blocks_meta *am,
+    struct blocks_meta *am,
     int blocks_in_y,
     int blocks_in_x )
 {
@@ -369,13 +373,13 @@ void encode(
     for ( int y = 0; y < blocks_in_y; ++y )
         for ( int x = 0; x < blocks_in_x; ++x )
         {
-            block &current = get_block_ptr(am, x, y)
-            int part = current.orientation;
-            part = part * steps_in_x + current.x;
-            part = part * steps_in_y + current.y;
-            part = part * steps_in_red + current.red;
-            part = part * steps_in_green + current.green;
-            part = part * steps_in_blue + current.red;
+            bp = get_block_ptr(am, x, y);
+            int part = bp->orientation;
+            part = part * steps_in_x + bp->x;
+            part = part * steps_in_y + bp->y;
+            part = part * steps_in_red + bp->red;
+            part = part * steps_in_green + bp->green;
+            part = part * steps_in_blue + bp->red;
             number *= 16 * steps_in_x * steps_in_y * steps_in_red * steps_in_green * steps_in_blue;
             number += part;
         }
@@ -424,8 +428,12 @@ void encode(
 }
 
 void decode(
-    char const *filename )
+    char const *filename,
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x )
 {
+    struct block *bp;
     // Here we build back that giant number.  Again, it's deriving a number in the base of however
     // many characters there are in the character set we're using.
     ifstream in( filename, ios::out | ios::binary );
@@ -473,23 +481,23 @@ void decode(
     for ( int y = blocks_in_y - 1; y >= 0; --y )
         for ( int x = blocks_in_x - 1; x >= 0; --x )
         {
-            block &current = blocks[ y ][ x ];
-            current.blue = static_cast< mpz_class >( number % steps_in_blue ).get_si();
+            bp = get_block_ptr(am, x, y );
+            bp->blue = static_cast< mpz_class >( number % steps_in_blue ).get_si();
             number /= steps_in_blue;
-            current.green = static_cast< mpz_class >( number % steps_in_green ).get_si();
+            bp->green = static_cast< mpz_class >( number % steps_in_green ).get_si();
             number /= steps_in_green;
-            current.red = static_cast< mpz_class >( number % steps_in_red ).get_si();
+            bp->red = static_cast< mpz_class >( number % steps_in_red ).get_si();
             number /= steps_in_red;
-            current.y = static_cast< mpz_class >( number % steps_in_y ).get_si();
+            bp->y = static_cast< mpz_class >( number % steps_in_y ).get_si();
             number /= steps_in_y;
-            current.x = static_cast< mpz_class >( number % steps_in_x ).get_si();
+            bp->x = static_cast< mpz_class >( number % steps_in_x ).get_si();
             number /= steps_in_x;
-            current.orientation = static_cast< mpz_class >( number % 16 ).get_si();
+            bp->orientation = static_cast< mpz_class >( number % 16 ).get_si();
             number /= 16;
         }
 }
 
-void main(
+int main(
     int argc,
     char **argv )
 {
@@ -530,18 +538,18 @@ void main(
         // steps_in_red = redStepsArg.getValue();
         // steps_in_green = greenStepsArg.getValue();
         // steps_in_blue = blueStepsArg.getValue();
-        blocks_in_x = xBlocksArg.getValue();
-        blocks_in_y = yBlocksArg.getValue();
+        int blocks_in_x = xBlocksArg.getValue();
+        int blocks_in_y = yBlocksArg.getValue();
         struct blocks_meta *m = alloc_meta(blocks_in_x, blocks_in_y);
         //
         // blocks[blocks_in_x][blocks_in_y];
         if (encodeBool) {
             compress( input, m, blocks_in_y, blocks_in_x );
-            encode( output m, blocks_in_y, blocks_in_x );
+            encode( output, m, blocks_in_y, blocks_in_x );
         }
         else if (decodeBool) {
-            decode( input );
-            decompress( output );
+            decode( input, m, blocks_in_y, blocks_in_x);
+            decompress( output, m, blocks_in_y, blocks_in_x);
         }
         return 0;
     }
