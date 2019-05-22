@@ -13,15 +13,15 @@ using namespace Magick;
 // Tuning parameters.  These control the quality and size of the compression.  Increase these to
 // enhance image quality at the expense of a larger output string.  These numbers should produce 140
 // character strings with the full assigned Unicode set described below.
-const static int steps_in_x = 30;
-const static int steps_in_y = 30;
+const static int steps_in_x = 23;
+const static int steps_in_y = 23;
 const static int steps_in_red = 4;
 const static int steps_in_green = 4;
 const static int steps_in_blue = 4;
 // const static int blocks_in_x = 20;
 // const static int blocks_in_y = 20;
-const static int maximum_width = 6000;
-const static int maximum_height = 6000;
+const static int maximum_width = 1000;
+const static int maximum_height = 1000;
 
 //        512 x 512
 // notes: 30 30 4 4 4 20 20 works
@@ -66,7 +66,7 @@ struct blocks_meta {
     int         y_size;
 };
 
-struct blocks_meta *alloc_meta(int x, int y)
+struct blocks_meta *init_block_meta(int x, int y)
 {
     struct block          *p  = (struct block *)malloc(sizeof(struct block) * x * y);
     struct blocks_meta    *am = (struct blocks_meta*)malloc(sizeof(struct blocks_meta));
@@ -540,7 +540,7 @@ int main(
         // steps_in_blue = blueStepsArg.getValue();
         int blocks_in_x = xBlocksArg.getValue();
         int blocks_in_y = yBlocksArg.getValue();
-        struct blocks_meta *m = alloc_meta(blocks_in_x, blocks_in_y);
+        struct blocks_meta *m = init_block_meta(blocks_in_x, blocks_in_y);
         //
         // blocks[blocks_in_x][blocks_in_y];
         if (encodeBool) {
