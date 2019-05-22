@@ -5,7 +5,6 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
-#include <tclap/CmdLine.h>
 
 using namespace std;
 using namespace Magick;
@@ -13,34 +12,15 @@ using namespace Magick;
 // Tuning parameters.  These control the quality and size of the compression.  Increase these to
 // enhance image quality at the expense of a larger output string.  These numbers should produce 140
 // character strings with the full assigned Unicode set described below.
-const static int steps_in_x = 30;
-const static int steps_in_y = 30;
-const static int steps_in_red = 4;
-const static int steps_in_green = 4;
-const static int steps_in_blue = 4;
-const static int blocks_in_x = 20;
-const static int blocks_in_y = 20;
-const static int maximum_width = 6000;
-const static int maximum_height = 6000;
-
-//        512 x 512
-// notes: 30 30 4 4 4 20 20 works
-//        30 30 4 4 4 25 25 does not
-//        25 25 4 4 4 19 19 Does not. 
-//
-//        1920 x 1080
-//        30 30 4 4 4 20 20 not work
-//        25 25 4 4 4 10 10 not work 
-//        25 25 4 4 4 5 5 works
-//        25 25 4 4 4 7 7 works
-//        25 25 4 4 4 9 9 works
-//        25 25 4 4 4 10 10 not work
-//        30 30 4 4 4 10 10 works
-//        40 40 4 4 4 20 20 not work
-//        3000 x 2000
-//        60 60 4 4 4 20 20 
-//        6144x3456
-//        25 25 10 10 10 9 9 
+static const int steps_in_x = 23;
+static const int steps_in_y = 23;
+static const int steps_in_red = 4;
+static const int steps_in_green = 4;
+static const int steps_in_blue = 4;
+static const int blocks_in_x = 11;
+static const int blocks_in_y = 11;
+static const int maximum_width = 1000;
+static const int maximum_height = 1000;
 
 // Other tuning parameters that don't affect the string size.  The first two are weights for color
 // blending.  Higher in b makes things more "fractally" looking.  Higher in a makes things more
@@ -58,33 +38,7 @@ struct block
     int x, y;
     int red, green, blue;
     long long int error;
-};
-
-struct blocks_meta {
-    struct block *p;
-    int         x_size;
-    int         y_size;
-};
-
-struct array_meta *alloc_meta(int x, int y)
-{
-    struct block         *p  = (struct block *)malloc(sizeof(struct block) * x * y);
-    struct array_meta    *am = (struct blocks_meta *)malloc(sizeof(struct blocks_meta));
-
-    bm->p      = p;
-    bm->x_size = x;
-    bm->y_size = y;
-
-    return bm ;
-}
-
-struct block *get_block_ptr(struct array_meta *am, int x, int y)
-{
-    return am->p + (am->x_size*y) + x;
-}
-
-// create and array 3x1
-
+} blocks[ blocks_in_y ][ blocks_in_x ];
 int image_width, image_height;
 
 // Full assigned Unicode, excluding <, >, &, control, combining, surrogate and private characters.
@@ -140,18 +94,12 @@ static const int codes[] =
 // };
 
 void compress(
-    char const *filename,
-    struct array_meta *am )
+    char const *filename )
 {
-    struct block *bp;
     // Initialize the blocks' error to a ridiculously high number.
-    for ( int y = 0; y < blocks_in_y; ++y ) {
-        for ( int x = 0; x < blocks_in_x; ++x ) {
-            bp = get_block_ptr(am, x, y);
-            bp->error = 0x7fffffffffffffffLL;
-        }
-    }
-            
+    for ( int y = 0; y < blocks_in_y; ++y )
+        for ( int x = 0; x < blocks_in_x; ++x )
+            blocks[ y ][ x ].error = 0x7fffffffffffffffLL;
 
     // Grab the source (range) image.
     Image range( filename );
@@ -173,12 +121,10 @@ void compress(
     {
         Image domain( range );
         domain.zoom( "50%" );
-        if ( orientation & 1 ) {
+        if ( orientation & 1 )
             domain.flip();
-        }
-        if ( orientation & 2 ) {
+        if ( orientation & 2 )
             domain.flop();
-        }
         domain.rotate( orientation / 4 * 45 );
         Geometry domain_size = domain.size();
         Pixels domain_view( domain );
@@ -236,9 +182,9 @@ void compress(
                             domain_green += domain_pixels->green;
                             domain_blue += domain_pixels->blue;
                         }
-                        if ( corner ) {
+                        if ( corner )
                             continue;
-                        } 
+
                         // Storing a contrast and brightness adjustment for each each color
                         // component takes too much space.  Instead, we find a constant color, that
                         // when blended with the domain block comes as close as possible to the
@@ -274,15 +220,15 @@ void compress(
                         }
 
                         // Is it out best match yet?
-                        bp = get_block_ptr(am, range_x, range_y)
-                        if ( error < bp->error ) {
-                            bp->orientation = orientation;
-                            bp->x           = domain_x;
-                            bp->y           = domain_y;
-                            bp->red = red_bits;
-                            bp->green = green_bits;
-                            bp->blue = blue_bits;
-                            bp->error = error;
+                        if ( error < blocks[ range_y ][ range_x ].error )
+                        {
+                            blocks[ range_y ][ range_x ].orientation = orientation;
+                            blocks[ range_y ][ range_x ].x = domain_x;
+                            blocks[ range_y ][ range_x ].y = domain_y;
+                            blocks[ range_y ][ range_x ].red = red_bits;
+                            blocks[ range_y ][ range_x ].green = green_bits;
+                            blocks[ range_y ][ range_x ].blue = blue_bits;
+                            blocks[ range_y ][ range_x ].error = error;
                         }
 
                     }
@@ -369,7 +315,7 @@ void encode(
             part = part * steps_in_y + current.y;
             part = part * steps_in_red + current.red;
             part = part * steps_in_green + current.green;
-            part = part * steps_in_blue + current.red;
+            part = part * steps_in_blue + current.blue;
             number *= 16 * steps_in_x * steps_in_y * steps_in_red * steps_in_green * steps_in_blue;
             number += part;
         }
@@ -483,65 +429,19 @@ void decode(
         }
 }
 
-void main(
+int main(
     int argc,
     char **argv )
 {
-    try
+    if ( !strcmp( argv[ 1 ], "encode" ) )
     {
-        TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
-        TCLAP::ValueArg<std::string> inputArg("i","input","input image",true,"","string");
-        TCLAP::ValueArg<std::string> outputArg("o","output","output image",true,"","string");
-        TCLAP::ValueArg<int> xStepsArg("x","stepsX","Steps in X",false,30,"int");
-        TCLAP::ValueArg<int> yStepsArg("y","stepsY","Steps in Y",false,30,"int");
-        TCLAP::ValueArg<int> redStepsArg("r","stepsRed","Steps in Red",false,4,"int");
-        TCLAP::ValueArg<int> greenStepsArg("g","stepsGreen","Steps in Green",false,4,"int");
-        TCLAP::ValueArg<int> blueStepsArg("b","stepsBlue","Steps in Blue",false,4,"int");
-        TCLAP::ValueArg<int> xBlocksArg("k","blocksX","Blocks in X",false,20,"int");
-        TCLAP::ValueArg<int> yBlocksArg("z","blocksY","Blocks in Y",false,20,"int");
-        cmd.add( inputArg );
-        cmd.add( outputArg );
-        cmd.add( xStepsArg );
-        cmd.add( yStepsArg );
-        cmd.add( redStepsArg );
-        cmd.add( greenStepsArg );
-        cmd.add( blueStepsArg );
-        cmd.add( xBlocksArg );
-        cmd.add( yBlocksArg );
-        TCLAP::SwitchArg encodeSwitch("e","encode","Encode the image", cmd, false);
-        TCLAP::SwitchArg decodeSwitch("d","decode","Decode the image", cmd, false);
-        cmd.parse( argc, argv );
-
-        bool  encodeBool = encodeSwitch.getValue();
-        bool  decodeBool = decodeSwitch.getValue();
-
-        const char *input  = inputArg.getValue().c_str();
-        const char *output = outputArg.getValue().c_str();
-
-
-        // steps_in_x = xStepsArg.getValue();
-        // steps_in_y = yStepsArg.getValue();
-        // steps_in_red = redStepsArg.getValue();
-        // steps_in_green = greenStepsArg.getValue();
-        // steps_in_blue = blueStepsArg.getValue();
-        // blocks_in_x = xBlocksArg.getValue();
-        // blocks_in_y = yBlocksArg.getValue();
-        //
-        // blocks[blocks_in_x][blocks_in_y];
-        if (encodeBool) {
-            compress( input );
-            encode( output );
-        }
-        else if (decodeBool) {
-            decode( input );
-            decompress( output );
-        }
-        return 0;
+        compress( argv[ 2 ] );
+        encode( argv[ 3 ] );
     }
-    catch (TCLAP::ArgException &e) {
-        std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
-        return -1;
+    else
+    {
+        decode( argv[ 2 ] );
+        decompress( argv[ 3 ] );
     }
+    return 0;
 }
-// TODO
-// move to _ var and camel cases
