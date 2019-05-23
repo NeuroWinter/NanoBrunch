@@ -338,12 +338,13 @@ void decompress(
 
                 bp = get_block_ptr(am, range_x, range_y );
 
-                Image domain = orientations[ bp->orientation ];
+                Image domain         = orientations[ bp->orientation ];
                 Geometry domain_size = domain.size();
 
                 int domain_top = ( domain_size.height() - block_height ) * bp->y / steps_in_y;
                 int domain_left = ( domain_size.width() - block_width ) * bp->x / steps_in_x;
                 domain.crop( Geometry( block_width, block_height, domain_left, domain_top ) );
+                domain.repage();
 
                 int quantized_red = bp->red * QuantumRange / ( steps_in_red - 1 );
                 int quantized_green = bp->green * QuantumRange / ( steps_in_green - 1 );
