@@ -13,15 +13,15 @@ using namespace Magick;
 // Tuning parameters.  These control the quality and size of the compression.  Increase these to
 // enhance image quality at the expense of a larger output string.  These numbers should produce 140
 // character strings with the full assigned Unicode set described below.
-const static int steps_in_x = 30;
-const static int steps_in_y = 30;
-const static int steps_in_red = 4;
-const static int steps_in_green = 4;
-const static int steps_in_blue = 4;
+// const static int steps_in_x = 30;
+// const static int steps_in_y = 30;
+// const static int steps_in_red = 4;
+// const static int steps_in_green = 4;
+// const static int steps_in_blue = 4;
 // const static int blocks_in_x = 20;
 // const static int blocks_in_y = 20;
-const static int maximum_width = 1000;
-const static int maximum_height = 1000;
+const static int maximum_width  = 60000;
+const static int maximum_height = 60000;
 
 //        512 x 512
 // notes: 30 30 4 4 4 20 20 works
@@ -138,12 +138,16 @@ static const int codes[] =
 // {
 //     19968, 20944, 0, 0
 // };
-
 void compress(
     char const *filename,
     struct blocks_meta *am,
     int blocks_in_y,
-    int blocks_in_x)
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue)
 {
     struct block *bp;
     // Initialize the blocks' error to a ridiculously high number.
@@ -298,7 +302,12 @@ void decompress(
     char const *filename,
     struct blocks_meta *am,
     int blocks_in_y,
-    int blocks_in_x)
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue)
 {
     struct block *bp;
     // Start out with a black range image.
@@ -365,7 +374,12 @@ void encode(
     char const *filename,
     struct blocks_meta *am,
     int blocks_in_y,
-    int blocks_in_x )
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue)
 {
     // For encoding, we just take all the information stored in the blocks structure, along with the
     // image size, and turn it into a huge number.  This is like using a variable base.
@@ -432,7 +446,12 @@ void decode(
     char const *filename,
     struct blocks_meta *am,
     int blocks_in_y,
-    int blocks_in_x )
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue)
 {
     struct block *bp;
     // Here we build back that giant number.  Again, it's deriving a number in the base of however
@@ -534,23 +553,22 @@ int main(
         const char *output = outputArg.getValue().c_str();
 
 
-        // steps_in_x = xStepsArg.getValue();
-        // steps_in_y = yStepsArg.getValue();
-        // steps_in_red = redStepsArg.getValue();
-        // steps_in_green = greenStepsArg.getValue();
-        // steps_in_blue = blueStepsArg.getValue();
+        int steps_in_x = xStepsArg.getValue();
+        int steps_in_y = yStepsArg.getValue();
+        int steps_in_red = redStepsArg.getValue();
+        int steps_in_green = greenStepsArg.getValue();
+        int steps_in_blue = blueStepsArg.getValue();
         int blocks_in_x = xBlocksArg.getValue();
         int blocks_in_y = yBlocksArg.getValue();
         struct blocks_meta *m = init_block_meta(blocks_in_x, blocks_in_y);
-        //
-        // blocks[blocks_in_x][blocks_in_y];
+
         if (encodeBool) {
-            compress( input, m, blocks_in_y, blocks_in_x );
-            encode( output, m, blocks_in_y, blocks_in_x );
+            compress( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
+            encode( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
         }
         else if (decodeBool) {
-            decode( input, m, blocks_in_y, blocks_in_x);
-            decompress( output, m, blocks_in_y, blocks_in_x);
+            decode( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
+            decompress( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
         }
         return 0;
     }
@@ -559,5 +577,3 @@ int main(
         return -1;
     }
 }
-// TODO
-// move to _ var and camel cases
