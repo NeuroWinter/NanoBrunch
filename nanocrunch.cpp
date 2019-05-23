@@ -13,8 +13,8 @@ using namespace Magick;
 // Tuning parameters.  These control the quality and size of the compression.  Increase these to
 // enhance image quality at the expense of a larger output string.  These numbers should produce 140
 // character strings with the full assigned Unicode set described below.
-const static int steps_in_x = 23;
-const static int steps_in_y = 23;
+const static int steps_in_x = 30;
+const static int steps_in_y = 30;
 const static int steps_in_red = 4;
 const static int steps_in_green = 4;
 const static int steps_in_blue = 4;
@@ -341,10 +341,10 @@ void decompress(
                 Image domain         = orientations[ bp->orientation ];
                 Geometry domain_size = domain.size();
 
-                int domain_top = ( domain_size.height() - block_height ) * bp->y / steps_in_y;
+                int domain_top  = ( domain_size.height() - block_height ) * bp->y / steps_in_y;
                 int domain_left = ( domain_size.width() - block_width ) * bp->x / steps_in_x;
-                domain.crop( Geometry( block_width, block_height, domain_left, domain_top ) );
                 domain.repage();
+                domain.crop( Geometry( block_width, block_height, domain_left, domain_top ) );
 
                 int quantized_red = bp->red * QuantumRange / ( steps_in_red - 1 );
                 int quantized_green = bp->green * QuantumRange / ( steps_in_green - 1 );
