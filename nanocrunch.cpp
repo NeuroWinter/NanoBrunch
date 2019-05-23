@@ -20,8 +20,8 @@ using namespace Magick;
 // const static int steps_in_blue = 4;
 // const static int blocks_in_x = 20;
 // const static int blocks_in_y = 20;
-const static int maximum_width  = 60000;
-const static int maximum_height = 60000;
+const static int maximum_width  = 1000;
+const static int maximum_height = 1000;
 
 //        512 x 512
 // notes: 30 30 4 4 4 20 20 works
@@ -352,7 +352,7 @@ void decompress(
 
                 int domain_top  = ( domain_size.height() - block_height ) * bp->y / steps_in_y;
                 int domain_left = ( domain_size.width() - block_width ) * bp->x / steps_in_x;
-                domain.repage();
+                // domain.repage();
                 domain.crop( Geometry( block_width, block_height, domain_left, domain_top ) );
 
                 int quantized_red = bp->red * QuantumRange / ( steps_in_red - 1 );
@@ -390,11 +390,11 @@ void encode(
         {
             bp = get_block_ptr(am, x, y);
             int part = bp->orientation;
-            part = part * steps_in_x + bp->x;
-            part = part * steps_in_y + bp->y;
-            part = part * steps_in_red + bp->red;
-            part = part * steps_in_green + bp->green;
-            part = part * steps_in_blue + bp->red;
+            part = part * steps_in_x + (bp->x);
+            part = part * steps_in_y + (bp->y);
+            part = part * steps_in_red + (bp->red);
+            part = part * steps_in_green + (bp->green);
+            part = part * steps_in_blue + (bp->red);
             number *= 16 * steps_in_x * steps_in_y * steps_in_red * steps_in_green * steps_in_blue;
             number += part;
         }
