@@ -5,6 +5,7 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <tclap/CmdLine.h>
 
 using namespace std;
 using namespace Magick;
@@ -562,7 +563,7 @@ int main(
     int argc,
     char **argv )
 {
-    if ( !strcmp( argv[ 1 ], "encode" ) )
+    try
     {
         TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
         TCLAP::ValueArg<std::string> inputArg("i","input","input image",true,"","string");
@@ -625,10 +626,8 @@ int main(
         }
         return 0;
     }
-    else
-    {
-        decode( argv[ 2 ] );
-        decompress( argv[ 3 ] );
+    catch (TCLAP::ArgException &e) {
+        std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+        return -1;
     }
-    return 0;
 }
