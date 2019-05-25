@@ -1,0 +1,3 @@
+Libraries that are required:
+TCLAP: https://sourceforge.net/projects/tclap/
+Magick++: https://web.mit.edu/graphics/share/ImageMagick/www/Magick++/Install.html

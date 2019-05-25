@@ -5,6 +5,7 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <tclap/CmdLine.h>
 
 using namespace std;
 using namespace Magick;
@@ -12,23 +13,42 @@ using namespace Magick;
 // Tuning parameters.  These control the quality and size of the compression.  Increase these to
 // enhance image quality at the expense of a larger output string.  These numbers should produce 140
 // character strings with the full assigned Unicode set described below.
-static const int steps_in_x = 23;
-static const int steps_in_y = 23;
-static const int steps_in_red = 4;
-static const int steps_in_green = 4;
-static const int steps_in_blue = 4;
-static const int blocks_in_x = 11;
-static const int blocks_in_y = 11;
-static const int maximum_width = 1000;
-static const int maximum_height = 1000;
+// const static int steps_in_x = 30;
+// const static int steps_in_y = 30;
+// const static int steps_in_red = 4;
+// const static int steps_in_green = 4;
+// const static int steps_in_blue = 4;
+// const static int blocks_in_x = 20;
+// const static int blocks_in_y = 20;
+const static int maximum_width  = 60000;
+const static int maximum_height = 60000;
+
+//        512 x 512
+// notes: 30 30 4 4 4 20 20 works
+//        30 30 4 4 4 25 25 does not
+//        25 25 4 4 4 19 19 Does not. 
+//
+//        1920 x 1080
+//        30 30 4 4 4 20 20 not work
+//        25 25 4 4 4 10 10 not work 
+//        25 25 4 4 4 5 5 works
+//        25 25 4 4 4 7 7 works
+//        25 25 4 4 4 9 9 works
+//        25 25 4 4 4 10 10 not work
+//        30 30 4 4 4 10 10 works
+//        40 40 4 4 4 20 20 not work
+//        3000 x 2000
+//        60 60 4 4 4 20 20 
+//        6144x3456
+//        25 25 10 10 10 9 9 
 
 // Other tuning parameters that don't affect the string size.  The first two are weights for color
 // blending.  Higher in b makes things more "fractally" looking.  Higher in a makes things more
 // blocky.  The iterations is just how many steps to go through when decoding before stopping.  The
 // output image usually converges well before 15 iterations.
-static const int color_weight_a = 1;
-static const int color_weight_b = 2;
-static const int iterations = 15;
+// static const int color_weight_a = 1;
+// static const int color_weight_b = 2;
+// static const int iterations = 15;
 
 // Images will be broken into a fixed set of blocks, with a small amount of data for each block.  We
 // also need to store the image size.  Filling this in is really the core function of this program.
@@ -38,7 +58,33 @@ struct block
     int x, y;
     int red, green, blue;
     long long int error;
-} blocks[ blocks_in_y ][ blocks_in_x ];
+};
+
+struct blocks_meta {
+    struct block *p;
+    int         x_size;
+    int         y_size;
+};
+
+struct blocks_meta *init_block_meta(int x, int y)
+{
+    struct block          *p  = (struct block *)malloc(sizeof(struct block) * x * y);
+    struct blocks_meta    *am = (struct blocks_meta*)malloc(sizeof(struct blocks_meta));
+
+    am->p      = p;
+    am->x_size = x;
+    am->y_size = y;
+
+    return am ;
+}
+
+struct block *get_block_ptr(struct blocks_meta *am, int x, int y)
+{
+    return am->p + (am->x_size*y) + x;
+}
+
+// create and array 3x1
+
 int image_width, image_height;
 
 // Full assigned Unicode, excluding <, >, &, control, combining, surrogate and private characters.
@@ -92,14 +138,38 @@ static const int codes[] =
 // {
 //     19968, 20944, 0, 0
 // };
-
 void compress(
-    char const *filename )
+    char const *filename,
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue,
+    int color_weight_a,
+    int color_weight_b,
+    char const *zoom)
 {
+    printf("Compressing with the following vars:\n");
+    printf("blocks_in_y: %d\n", blocks_in_y);
+    printf("blocks_in_x: %d\n", blocks_in_x);
+    printf("steps_in_x: %d\n", steps_in_x);
+    printf("steps_in_y: %d\n", steps_in_y);
+    printf("steps_in_red: %d\n", steps_in_red);
+    printf("steps_in_green: %d\n", steps_in_green);
+    printf("steps_in_blue: %d\n", steps_in_blue);
+    printf("color_weight_a: %d\n", color_weight_a);
+    printf("color_weight_b: %d\n", color_weight_b);
+    printf("zoom: %s\n", zoom);
+    struct block *bp;
     // Initialize the blocks' error to a ridiculously high number.
     for ( int y = 0; y < blocks_in_y; ++y )
-        for ( int x = 0; x < blocks_in_x; ++x )
-            blocks[ y ][ x ].error = 0x7fffffffffffffffLL;
+        for ( int x = 0; x < blocks_in_x; ++x ) {
+            bp = get_block_ptr(am, x, y);
+            bp->error = 0x7fffffffffffffffLL;
+        }
 
     // Grab the source (range) image.
     Image range( filename );
@@ -120,7 +190,7 @@ void compress(
     for ( int orientation = 0; orientation < 16; ++orientation )
     {
         Image domain( range );
-        domain.zoom( "50%" );
+        domain.zoom( zoom );
         if ( orientation & 1 )
             domain.flip();
         if ( orientation & 2 )
@@ -157,6 +227,7 @@ void compress(
                 // current range block.
                 for ( int domain_y = 0; domain_y < steps_in_y; ++domain_y )
                 {
+
                     int domain_top = ( domain_size.height() - block_height ) * domain_y / steps_in_y;
                     for ( int domain_x = 0; domain_x < steps_in_x; ++domain_x )
                     {
@@ -220,15 +291,15 @@ void compress(
                         }
 
                         // Is it out best match yet?
-                        if ( error < blocks[ range_y ][ range_x ].error )
-                        {
-                            blocks[ range_y ][ range_x ].orientation = orientation;
-                            blocks[ range_y ][ range_x ].x = domain_x;
-                            blocks[ range_y ][ range_x ].y = domain_y;
-                            blocks[ range_y ][ range_x ].red = red_bits;
-                            blocks[ range_y ][ range_x ].green = green_bits;
-                            blocks[ range_y ][ range_x ].blue = blue_bits;
-                            blocks[ range_y ][ range_x ].error = error;
+                        bp = get_block_ptr(am, range_x, range_y);
+                        if ( error < bp->error ) {
+                            bp->orientation = orientation;
+                            bp->x           = domain_x;
+                            bp->y           = domain_y;
+                            bp->red         = red_bits;
+                            bp->green       = green_bits;
+                            bp->blue        = blue_bits;
+                            bp->error       = error;
                         }
 
                     }
@@ -239,8 +310,32 @@ void compress(
 }
 
 void decompress(
-    char const *filename )
+    char const *filename,
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue,
+    int color_weight_a,
+    int color_weight_b,
+    int iterations,
+    char const *zoom)
 {
+    printf("Decompressing with the following vars:\n");
+    printf("blocks_in_y: %d\n", blocks_in_y);
+    printf("blocks_in_x: %d\n", blocks_in_x);
+    printf("steps_in_x: %d\n", steps_in_x);
+    printf("steps_in_y: %d\n", steps_in_y);
+    printf("steps_in_red: %d\n", steps_in_red);
+    printf("steps_in_green: %d\n", steps_in_green);
+    printf("steps_in_blue: %d\n", steps_in_blue);
+    printf("color_weight_a: %d\n", color_weight_a);
+    printf("color_weight_b: %d\n", color_weight_b);
+    printf("zoom: %s\n", zoom);
+    struct block *bp;
     // Start out with a black range image.
     Image range( Geometry( image_width, image_height ), Color( "black" ) );
     range.backgroundColor( Color( "black" ) );
@@ -254,7 +349,7 @@ void decompress(
         // Precompute the downsampling and all of the different orientations of the range image.
         Image orientations[ 16 ];
         orientations[ 0 ] = range;
-        orientations[ 0 ].zoom( "50%" );
+        orientations[ 0 ].zoom( zoom );
         for ( int orientation = 1; orientation < 16; ++orientation )
         {
             orientations[ orientation ] = orientations[ 0 ];
@@ -276,18 +371,19 @@ void decompress(
                 int range_left = image_width * range_x / blocks_in_x;
                 int block_width = image_width * ( range_x + 1) / blocks_in_x - range_left;
 
-                block &current = blocks[ range_y ][ range_x ];
+                bp = get_block_ptr(am, range_x, range_y );
 
-                Image domain = orientations[ current.orientation ];
+                Image domain         = orientations[ bp->orientation ];
                 Geometry domain_size = domain.size();
 
-                int domain_top = ( domain_size.height() - block_height ) * current.y / steps_in_y;
-                int domain_left = ( domain_size.width() - block_width ) * current.x / steps_in_x;
+                int domain_top  = ( domain_size.height() - block_height ) * bp->y / steps_in_y;
+                int domain_left = ( domain_size.width() - block_width ) * bp->x / steps_in_x;
+                domain.repage();
                 domain.crop( Geometry( block_width, block_height, domain_left, domain_top ) );
 
-                int quantized_red = current.red * QuantumRange / ( steps_in_red - 1 );
-                int quantized_green = current.green * QuantumRange / ( steps_in_green - 1 );
-                int quantized_blue = current.blue * QuantumRange / ( steps_in_blue - 1 );
+                int quantized_red = bp->red * QuantumRange / ( steps_in_red - 1 );
+                int quantized_green = bp->green * QuantumRange / ( steps_in_green - 1 );
+                int quantized_blue = bp->blue * QuantumRange / ( steps_in_blue - 1 );
                 domain.colorize( 100 * color_weight_a / ( color_weight_a + color_weight_b ),
                                  Color( quantized_red, quantized_green, quantized_blue ) );
 
@@ -301,21 +397,38 @@ void decompress(
 }
 
 void encode(
-    char const *filename )
+    char const *filename,
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue)
 {
+    printf("Encoding with the following vars:\n");
+    printf("blocks_in_y: %d\n", blocks_in_y);
+    printf("blocks_in_x: %d\n", blocks_in_x);
+    printf("steps_in_x: %d\n", steps_in_x);
+    printf("steps_in_y: %d\n", steps_in_y);
+    printf("steps_in_red: %d\n", steps_in_red);
+    printf("steps_in_green: %d\n", steps_in_green);
+    printf("steps_in_blue: %d\n", steps_in_blue);
     // For encoding, we just take all the information stored in the blocks structure, along with the
     // image size, and turn it into a huge number.  This is like using a variable base.
     mpz_class number = 0;
+    struct block *bp;
     for ( int y = 0; y < blocks_in_y; ++y )
         for ( int x = 0; x < blocks_in_x; ++x )
         {
-            block &current = blocks[ y ][ x ];
-            int part = current.orientation;
-            part = part * steps_in_x + current.x;
-            part = part * steps_in_y + current.y;
-            part = part * steps_in_red + current.red;
-            part = part * steps_in_green + current.green;
-            part = part * steps_in_blue + current.blue;
+            bp = get_block_ptr(am, x, y);
+            int part = bp->orientation;
+            part = part * steps_in_x + (bp->x);
+            part = part * steps_in_y + (bp->y);
+            part = part * steps_in_red + (bp->red);
+            part = part * steps_in_green + (bp->green);
+            part = part * steps_in_blue + (bp->blue);
             number *= 16 * steps_in_x * steps_in_y * steps_in_red * steps_in_green * steps_in_blue;
             number += part;
         }
@@ -364,8 +477,25 @@ void encode(
 }
 
 void decode(
-    char const *filename )
+    char const *filename,
+    struct blocks_meta *am,
+    int blocks_in_y,
+    int blocks_in_x,
+    int steps_in_x,
+    int steps_in_y,
+    int steps_in_red,
+    int steps_in_green,
+    int steps_in_blue)
 {
+    printf("Encoding with the following vars:\n");
+    printf("blocks_in_y: %d\n", blocks_in_y);
+    printf("blocks_in_x: %d\n", blocks_in_x);
+    printf("steps_in_x: %d\n", steps_in_x);
+    printf("steps_in_y: %d\n", steps_in_y);
+    printf("steps_in_red: %d\n", steps_in_red);
+    printf("steps_in_green: %d\n", steps_in_green);
+    printf("steps_in_blue: %d\n", steps_in_blue);
+    struct block *bp;
     // Here we build back that giant number.  Again, it's deriving a number in the base of however
     // many characters there are in the character set we're using.
     ifstream in( filename, ios::out | ios::binary );
@@ -413,18 +543,18 @@ void decode(
     for ( int y = blocks_in_y - 1; y >= 0; --y )
         for ( int x = blocks_in_x - 1; x >= 0; --x )
         {
-            block &current = blocks[ y ][ x ];
-            current.blue = static_cast< mpz_class >( number % steps_in_blue ).get_si();
+            bp = get_block_ptr(am, x, y );
+            bp->blue = static_cast< mpz_class >( number % steps_in_blue ).get_si();
             number /= steps_in_blue;
-            current.green = static_cast< mpz_class >( number % steps_in_green ).get_si();
+            bp->green = static_cast< mpz_class >( number % steps_in_green ).get_si();
             number /= steps_in_green;
-            current.red = static_cast< mpz_class >( number % steps_in_red ).get_si();
+            bp->red = static_cast< mpz_class >( number % steps_in_red ).get_si();
             number /= steps_in_red;
-            current.y = static_cast< mpz_class >( number % steps_in_y ).get_si();
+            bp->y = static_cast< mpz_class >( number % steps_in_y ).get_si();
             number /= steps_in_y;
-            current.x = static_cast< mpz_class >( number % steps_in_x ).get_si();
+            bp->x = static_cast< mpz_class >( number % steps_in_x ).get_si();
             number /= steps_in_x;
-            current.orientation = static_cast< mpz_class >( number % 16 ).get_si();
+            bp->orientation = static_cast< mpz_class >( number % 16 ).get_si();
             number /= 16;
         }
 }
@@ -433,15 +563,71 @@ int main(
     int argc,
     char **argv )
 {
-    if ( !strcmp( argv[ 1 ], "encode" ) )
+    try
     {
-        compress( argv[ 2 ] );
-        encode( argv[ 3 ] );
+        TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
+        TCLAP::ValueArg<std::string> inputArg("i","input","input image",true,"","string");
+        TCLAP::ValueArg<std::string> outputArg("o","output","output image",true,"","string");
+        TCLAP::ValueArg<int> xStepsArg("x","stepsX","Steps in X",false,30,"int");
+        TCLAP::ValueArg<int> yStepsArg("y","stepsY","Steps in Y",false,30,"int");
+        TCLAP::ValueArg<int> redStepsArg("r","stepsRed","Steps in Red",false,4,"int");
+        TCLAP::ValueArg<int> greenStepsArg("g","stepsGreen","Steps in Green",false,4,"int");
+        TCLAP::ValueArg<int> blueStepsArg("b","stepsBlue","Steps in Blue",false,4,"int");
+        TCLAP::ValueArg<int> xBlocksArg("k","blocksX","Blocks in X",false,20,"int");
+        TCLAP::ValueArg<int> yBlocksArg("l","blocksY","Blocks in Y",false,20,"int");
+        TCLAP::ValueArg<int> colourWeightA("a","colourA","Weight for colour a (Blocky)",false,1,"int");
+        TCLAP::ValueArg<int> colourWeightB("c","colourB","Weight for colour a (Fractal)",false,2,"int");
+        TCLAP::ValueArg<int> iteration("t","iterations","decode iterations",false,15,"int");
+        TCLAP::ValueArg<std::string> zoomArg("z","zoom","zoom %",false,"50%","string");
+        cmd.add( inputArg );
+        cmd.add( outputArg );
+        cmd.add( xStepsArg );
+        cmd.add( yStepsArg );
+        cmd.add( redStepsArg );
+        cmd.add( greenStepsArg );
+        cmd.add( blueStepsArg );
+        cmd.add( xBlocksArg );
+        cmd.add( yBlocksArg );
+        cmd.add( colourWeightA );
+        cmd.add( colourWeightB );
+        cmd.add( iteration );
+        cmd.add( zoomArg );
+        TCLAP::SwitchArg encodeSwitch("e","encode","Encode the image", cmd, false);
+        TCLAP::SwitchArg decodeSwitch("d","decode","Decode the image", cmd, false);
+        cmd.parse( argc, argv );
+
+        bool  encodeBool = encodeSwitch.getValue();
+        bool  decodeBool = decodeSwitch.getValue();
+
+        const char *input  = inputArg.getValue().c_str();
+        const char *output = outputArg.getValue().c_str();
+
+
+        int steps_in_x = xStepsArg.getValue();
+        int steps_in_y = yStepsArg.getValue();
+        int steps_in_red = redStepsArg.getValue();
+        int steps_in_green = greenStepsArg.getValue();
+        int steps_in_blue = blueStepsArg.getValue();
+        int blocks_in_x = xBlocksArg.getValue();
+        int blocks_in_y = yBlocksArg.getValue();
+        int color_weight_a = colourWeightA.getValue();
+        int color_weight_b = colourWeightB.getValue();
+        int iterations     = iteration.getValue();
+        const char *zoom           = zoomArg.getValue().c_str();
+        struct blocks_meta *m = init_block_meta(blocks_in_x, blocks_in_y);
+
+        if (encodeBool) {
+            compress( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, zoom);
+            encode( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
+        }
+        else if (decodeBool) {
+            decode( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
+            decompress( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, iterations, zoom);
+        }
+        return 0;
     }
-    else
-    {
-        decode( argv[ 2 ] );
-        decompress( argv[ 3 ] );
+    catch (TCLAP::ArgException &e) {
+        std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+        return -1;
     }
-    return 0;
 }
