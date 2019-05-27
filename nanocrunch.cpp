@@ -591,7 +591,7 @@ int main(
         TCLAP::ValueArg<int> colourWeightB("c","colourB","Weight for colour a (Fractal)",false,2,"int");
         TCLAP::ValueArg<int> iteration("t","iterations","decode iterations",false,15,"int");
         TCLAP::ValueArg<std::string> zoomArg("z","zoom","zoom %",false,"50%","string");
-        TCLAP::ValueArg<std::string> outputResArg("s","output-size","output res",false,"","string");
+        TCLAP::ValueArg<std::string> outputResArg("s","output-size","Force the output image to have this resolution, this must be in the form of 'Image_widthxImage_height', there must be an 'x' between the width and height.",false,"","string");
         cmd.add( inputArg );
         cmd.add( outputArg );
         cmd.add( xStepsArg );
