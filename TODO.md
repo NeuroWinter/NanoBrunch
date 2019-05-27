@@ -5,6 +5,6 @@
     ```
 * Change program name to NanoBrunch.
 * Write a README.md.
-* Add param for forcing output resolution.
+* Add param for forcing output resolution. - DONE
 * Add param for switching RGB in both encode and decode steps.
 
