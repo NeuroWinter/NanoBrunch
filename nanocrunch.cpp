@@ -638,8 +638,8 @@ int main(
         else if (decodeBool) {
             // We only need to use output res if we are decoding
             string output_res = outputResArg.getValue().c_str();
-            int output_x = 0;
-            int output_y = 0;
+            int output_x;
+            int output_y;
             if ( output_res == "" ){
                 output_x = 0;
                 output_y = 0; 
