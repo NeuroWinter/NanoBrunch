@@ -652,7 +652,7 @@ int main(
                 string output_y_str = output_res.substr(pos+1, output_res.size() - pos);
                 output_x = std::stoi( output_x_str );
                 output_y = std::stoi( output_y_str );
-                printf("Forcing output image to:\n")
+                printf("Forcing output image to:\n");
                 printf("x: %d\n", output_x);
                 printf("y: %d\n", output_y);
             }
