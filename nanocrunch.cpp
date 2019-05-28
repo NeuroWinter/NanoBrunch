@@ -485,9 +485,11 @@ void decode(
     int steps_in_y,
     int steps_in_red,
     int steps_in_green,
-    int steps_in_blue)
+    int steps_in_blue,
+    int output_y,
+    int output_x)
 {
-    printf("Encoding with the following vars:\n");
+    printf("Decoding with the following vars:\n");
     printf("blocks_in_y: %d\n", blocks_in_y);
     printf("blocks_in_x: %d\n", blocks_in_x);
     printf("steps_in_x: %d\n", steps_in_x);
@@ -536,10 +538,20 @@ void decode(
 
     // Now, we do the conversion back from that giant number to fill the image size and the block
     // data.  This is all just the reverse order of the encoding of this into the giant number.
-    image_height = static_cast< mpz_class >( number % maximum_height ).get_si();
-    number /= maximum_height;
-    image_width = static_cast< mpz_class >( number % maximum_width ).get_si();
-    number /= maximum_width;
+    if ( output_x != 0 ) {
+        if ( output_y != 0 ){
+            image_height = output_y;
+            number /= maximum_height;
+            image_width = output_x;
+            number /= maximum_width;
+        } 
+    }
+    else{
+        image_height = static_cast< mpz_class >( number % maximum_height ).get_si();
+        number /= maximum_height;
+        image_width = static_cast< mpz_class >( number % maximum_width ).get_si();
+        number /= maximum_width;
+    }
     for ( int y = blocks_in_y - 1; y >= 0; --y )
         for ( int x = blocks_in_x - 1; x >= 0; --x )
         {
@@ -579,6 +591,7 @@ int main(
         TCLAP::ValueArg<int> colourWeightB("c","colourB","Weight for colour a (Fractal)",false,2,"int");
         TCLAP::ValueArg<int> iteration("t","iterations","decode iterations",false,15,"int");
         TCLAP::ValueArg<std::string> zoomArg("z","zoom","zoom %",false,"50%","string");
+        TCLAP::ValueArg<std::string> outputResArg("s","output-size","Force the output image to have this resolution, this must be in the form of 'Image_widthxImage_height', there must be an 'x' between the width and height.",false,"","string");
         cmd.add( inputArg );
         cmd.add( outputArg );
         cmd.add( xStepsArg );
@@ -592,6 +605,7 @@ int main(
         cmd.add( colourWeightB );
         cmd.add( iteration );
         cmd.add( zoomArg );
+        cmd.add( outputResArg );
         TCLAP::SwitchArg encodeSwitch("e","encode","Encode the image", cmd, false);
         TCLAP::SwitchArg decodeSwitch("d","decode","Decode the image", cmd, false);
         cmd.parse( argc, argv );
@@ -616,12 +630,33 @@ int main(
         const char *zoom           = zoomArg.getValue().c_str();
         struct blocks_meta *m = init_block_meta(blocks_in_x, blocks_in_y);
 
+
         if (encodeBool) {
             compress( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, zoom);
             encode( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
         }
         else if (decodeBool) {
-            decode( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
+            // We only need to use output res if we are decoding
+            string output_res = outputResArg.getValue().c_str();
+            int output_x;
+            int output_y;
+            if ( output_res == "" ){
+                output_x = 0;
+                output_y = 0; 
+            }
+            else {
+                int pos = output_res.find('x');
+                if(pos == string::npos)
+                    return 1;
+                string output_x_str = output_res.substr(0, pos);
+                string output_y_str = output_res.substr(pos+1, output_res.size() - pos);
+                output_x = std::stoi( output_x_str );
+                output_y = std::stoi( output_y_str );
+                printf("Forcing output image to:\n");
+                printf("x: %d\n", output_x);
+                printf("y: %d\n", output_y);
+            }
+            decode( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, output_y, output_x );
             decompress( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, iterations, zoom);
         }
         return 0;
