@@ -174,6 +174,7 @@ void compress(
     // Grab the source (range) image.
     Image range( filename );
     range.type( TrueColorType );
+    range.colorSpace( YCCColorspace );
     range.matte( true );
     range.backgroundColor( Color( 0, 0, 0, QuantumRange ) );
     Geometry range_size = range.size();
@@ -322,7 +323,8 @@ void decompress(
     int color_weight_a,
     int color_weight_b,
     int iterations,
-    char const *zoom)
+    char const *zoom,
+    char const *color_space)
 {
     printf("Decompressing with the following vars:\n");
     printf("blocks_in_y: %d\n", blocks_in_y);
@@ -339,7 +341,124 @@ void decompress(
     // Start out with a black range image.
     Image range( Geometry( image_width, image_height ), Color( "black" ) );
     range.backgroundColor( Color( "black" ) );
-
+    range.colorSpace(LuvColorspace);
+    if (!strcmp("CMY",color_space)){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(CMYColorspace);
+    } 
+    else if ( !strcmp(color_space , "CYMK" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(CMYKColorspace);
+    }
+    else if ( !strcmp(color_space , "GRAY" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(GRAYColorspace);
+    }
+    else if ( !strcmp(color_space , "HCL" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HCLColorspace);
+    }
+    else if ( !strcmp(color_space , "HCLp" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HCLpColorspace);
+    }
+    else if ( !strcmp(color_space , "HSB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSBColorspace);
+    }
+    else if ( !strcmp(color_space , "HSI" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSIColorspace);
+    }
+    else if ( !strcmp(color_space , "HSL" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSLColorspace);
+    }
+    else if ( !strcmp(color_space , "HSV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSVColorspace);
+    }
+    else if ( !strcmp(color_space , "HWB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HWBColorspace);
+    }
+    else if ( !strcmp(color_space , "LAB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LabColorspace);
+    }
+    else if ( !strcmp(color_space , "LCH" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LCHColorspace);
+    }
+    else if ( !strcmp(color_space , "LCHAB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LCHabColorspace);
+    }
+    else if ( !strcmp(color_space , "LCHUV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LCHuvColorspace);
+    }
+    else if ( !strcmp(color_space , "LOG" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LogColorspace);
+    }
+    else if ( !strcmp(color_space , "LMS" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LMSColorspace);
+    }
+    else if ( !strcmp(color_space , "LUV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LuvColorspace);
+    }
+    else if ( !strcmp(color_space , "OHTA" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(OHTAColorspace);
+    }
+    else if ( !strcmp(color_space , "RGB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(RGBColorspace);
+    }
+    else if ( !strcmp(color_space , "SCRGB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(scRGBColorspace);
+    }
+    else if ( !strcmp(color_space , "SRGB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(sRGBColorspace);
+    }
+    else if ( !strcmp(color_space , "XYY" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(xyYColorspace);
+    }
+    else if ( !strcmp(color_space , "XYZ" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(XYZColorspace);
+    }
+    else if ( !strcmp(color_space , "YCB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YCbCrColorspace);
+    }
+    else if ( !strcmp(color_space , "YCC" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YCCColorspace);
+    }
+    else if ( !strcmp(color_space , "YDB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YDbDrColorspace);
+    }
+    else if ( !strcmp(color_space , "YIQ" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YIQColorspace);
+    }
+    else if ( !strcmp(color_space , "YPB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YPbPrColorspace);
+    }
+    else if ( !strcmp(color_space , "YUV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YUVColorspace);
+    }
+    // }
     // Then go for a fixed number of iterations.  Saving the image after each iteration produces a
     // fun progressive reveal of the decompressed image.
     for ( int iteration = 0; iteration < iterations; ++iteration )
@@ -592,6 +711,7 @@ int main(
         TCLAP::ValueArg<int> iteration("t","iterations","decode iterations",false,15,"int");
         TCLAP::ValueArg<std::string> zoomArg("z","zoom","zoom %",false,"50%","string");
         TCLAP::ValueArg<std::string> outputResArg("s","output-size","Force the output image to have this resolution, this must be in the form of 'Image_widthxImage_height', there must be an 'x' between the width and height.",false,"","string");
+        TCLAP::ValueArg<std::string> colourSpaceArg("","clr","Colour space to use during decoding",false,"","string");
         cmd.add( inputArg );
         cmd.add( outputArg );
         cmd.add( xStepsArg );
@@ -606,6 +726,7 @@ int main(
         cmd.add( iteration );
         cmd.add( zoomArg );
         cmd.add( outputResArg );
+        cmd.add( colourSpaceArg );
         TCLAP::SwitchArg encodeSwitch("e","encode","Encode the image", cmd, false);
         TCLAP::SwitchArg decodeSwitch("d","decode","Decode the image", cmd, false);
         cmd.parse( argc, argv );
@@ -617,19 +738,21 @@ int main(
         const char *output = outputArg.getValue().c_str();
 
 
-        int steps_in_x = xStepsArg.getValue();
-        int steps_in_y = yStepsArg.getValue();
-        int steps_in_red = redStepsArg.getValue();
-        int steps_in_green = greenStepsArg.getValue();
-        int steps_in_blue = blueStepsArg.getValue();
-        int blocks_in_x = xBlocksArg.getValue();
-        int blocks_in_y = yBlocksArg.getValue();
-        int color_weight_a = colourWeightA.getValue();
-        int color_weight_b = colourWeightB.getValue();
-        int iterations     = iteration.getValue();
-        const char *zoom           = zoomArg.getValue().c_str();
-        struct blocks_meta *m = init_block_meta(blocks_in_x, blocks_in_y);
+        int steps_in_x         = xStepsArg.getValue();
+        int steps_in_y         = yStepsArg.getValue();
+        int steps_in_red       = redStepsArg.getValue();
+        int steps_in_green     = greenStepsArg.getValue();
+        int steps_in_blue      = blueStepsArg.getValue();
+        int blocks_in_x        = xBlocksArg.getValue();
+        int blocks_in_y        = yBlocksArg.getValue();
+        int color_weight_a     = colourWeightA.getValue();
+        int color_weight_b     = colourWeightB.getValue();
+        int iterations         = iteration.getValue();
+        const char *zoom       = zoomArg.getValue().c_str();
+        const char *color_space = colourSpaceArg.getValue().c_str();
+        struct blocks_meta *m  = init_block_meta(blocks_in_x, blocks_in_y);
 
+        printf("color_space: %s\n", color_space);
 
         if (encodeBool) {
             compress( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, zoom);
@@ -657,7 +780,7 @@ int main(
                 printf("y: %d\n", output_y);
             }
             decode( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, output_y, output_x );
-            decompress( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, iterations, zoom);
+            decompress( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, iterations, zoom, color_space);
         }
         return 0;
     }
