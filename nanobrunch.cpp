@@ -150,7 +150,8 @@ void compress(
     int steps_in_blue,
     int color_weight_a,
     int color_weight_b,
-    char const *zoom)
+    char const *zoom,
+    char const *color_space)
 {
     printf("Compressing with the following vars:\n");
     printf("blocks_in_y: %d\n", blocks_in_y);
@@ -174,7 +175,123 @@ void compress(
     // Grab the source (range) image.
     Image range( filename );
     range.type( TrueColorType );
-    range.colorSpace( YCCColorspace );
+
+    if (!strcmp("CMY",color_space)){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(CMYColorspace);
+    } 
+    else if ( !strcmp(color_space , "CYMK" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(CMYKColorspace);
+    }
+    else if ( !strcmp(color_space , "GRAY" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(GRAYColorspace);
+    }
+    else if ( !strcmp(color_space , "HCL" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HCLColorspace);
+    }
+    else if ( !strcmp(color_space , "HCLp" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HCLpColorspace);
+    }
+    else if ( !strcmp(color_space , "HSB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSBColorspace);
+    }
+    else if ( !strcmp(color_space , "HSI" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSIColorspace);
+    }
+    else if ( !strcmp(color_space , "HSL" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSLColorspace);
+    }
+    else if ( !strcmp(color_space , "HSV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HSVColorspace);
+    }
+    else if ( !strcmp(color_space , "HWB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(HWBColorspace);
+    }
+    else if ( !strcmp(color_space , "LAB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LabColorspace);
+    }
+    else if ( !strcmp(color_space , "LCH" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LCHColorspace);
+    }
+    else if ( !strcmp(color_space , "LCHAB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LCHabColorspace);
+    }
+    else if ( !strcmp(color_space , "LCHUV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LCHuvColorspace);
+    }
+    else if ( !strcmp(color_space , "LOG" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LogColorspace);
+    }
+    else if ( !strcmp(color_space , "LMS" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LMSColorspace);
+    }
+    else if ( !strcmp(color_space , "LUV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(LuvColorspace);
+    }
+    else if ( !strcmp(color_space , "OHTA" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(OHTAColorspace);
+    }
+    else if ( !strcmp(color_space , "RGB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(RGBColorspace);
+    }
+    else if ( !strcmp(color_space , "SCRGB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(scRGBColorspace);
+    }
+    else if ( !strcmp(color_space , "SRGB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(sRGBColorspace);
+    }
+    else if ( !strcmp(color_space , "XYY" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(xyYColorspace);
+    }
+    else if ( !strcmp(color_space , "XYZ" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(XYZColorspace);
+    }
+    else if ( !strcmp(color_space , "YCB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YCbCrColorspace);
+    }
+    else if ( !strcmp(color_space , "YCC" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YCCColorspace);
+    }
+    else if ( !strcmp(color_space , "YDB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YDbDrColorspace);
+    }
+    else if ( !strcmp(color_space , "YIQ" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YIQColorspace);
+    }
+    else if ( !strcmp(color_space , "YPB" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YPbPrColorspace);
+    }
+    else if ( !strcmp(color_space , "YUV" )){
+        printf("Using color space: %s\n", color_space);
+        range.colorSpace(YUVColorspace);
+    }
     range.matte( true );
     range.backgroundColor( Color( 0, 0, 0, QuantumRange ) );
     Geometry range_size = range.size();
@@ -341,7 +458,6 @@ void decompress(
     // Start out with a black range image.
     Image range( Geometry( image_width, image_height ), Color( "black" ) );
     range.backgroundColor( Color( "black" ) );
-    range.colorSpace(LuvColorspace);
     if (!strcmp("CMY",color_space)){
         printf("Using color space: %s\n", color_space);
         range.colorSpace(CMYColorspace);
@@ -755,7 +871,7 @@ int main(
         printf("color_space: %s\n", color_space);
 
         if (encodeBool) {
-            compress( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, zoom);
+            compress( input, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue, color_weight_a, color_weight_b, zoom, color_space);
             encode( output, m, blocks_in_y, blocks_in_x, steps_in_x, steps_in_y, steps_in_red, steps_in_green, steps_in_blue);
         }
         else if (decodeBool) {
