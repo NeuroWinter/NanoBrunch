@@ -16,7 +16,7 @@ https://stackoverflow.com/a/929360
 
 ## Running the project
 1. Encode the image.
-  * `././nanobrunch -e -i {Your input image} -o {OutputFilename}`
+  * `./nanobrunch -e -i {Your input image} -o {OutputFilename}`
 2. Decode the image.
   * `./nanobrunch -d -i {OutputFilename from step one} -o {FinalImageName}.png`
 
